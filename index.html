@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="talentapp:project_verification" content="844641f80aba9b5074ff4bb1d834b8b8a30c0143b8c4ab544010f9021a7580255653d4aa0f0be9d59cea98d8deb8e193a8cefa7df5245b6578fd5efeba938ad6" />
-<title>ChainMiner</title>
+<title>BaseMiner</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
 <style>
   :root {
@@ -441,8 +441,9 @@
   <div class="topbar-accent" id="topbar-accent"></div>
   <div class="logo">
     <div class="logo-icon" id="logo-icon">⛏</div>
-    <span id="app-title">ChainMiner</span>
+    <span id="app-title">BaseMiner</span>
     <span class="minipay-badge hidden" id="minipay-badge">MiniPay</span>
+    <span class="minipay-badge hidden" id="baseapp-badge">Base App</span>
   </div>
   <div class="topbar-right">
     <button class="chain-badge" onclick="openChainModal()" id="chain-badge-btn">
@@ -948,8 +949,8 @@ const MINER_ABI = [
   "function paused() view returns (bool)",
   "function miners(address) view returns (uint256,uint256,uint8)",
   "function totalMinted() view returns (uint256)",
-  "function MAX_CBALL_GLOBAL() view returns (uint256)",
-  "function MAX_CBALL_PER_USER() view returns (uint256)",
+  "function MAX_BBALL_GLOBAL() view returns (uint256)",
+  "function MAX_BBALL_PER_USER() view returns (uint256)",
   "function globalSupplyRemaining() view returns (uint256)",
   "function getLeaderboard() view returns (address[],uint256[])",
   "function getStats(address) view returns (uint256,uint256,uint8,uint256)",
@@ -1168,17 +1169,18 @@ const CHAINS = {
 //  App state
 // ════════════════════════════════════════════════════════════════
 let provider = null, signer = null, address = null;
-let selectedChainId = 42220;
+let selectedChainId = 8453;
 let contracts = { cball:null, miner:null, badge:null };
-let cfg = { cball:'', miner:'', badge:'', chainId:42220 };
+let cfg = { cball:'', miner:'', badge:'', chainId:8453 };
 
 const TOOL_NAMES  = ['Pickaxe','Drill','Excavator'];
 const TOOL_EMOJIS = ['⛏️','🔩','🏗️'];
 
 // ════════════════════════════════════════════════════════════════
-//  MiniPay detection
+//  Wallet environment detection
 // ════════════════════════════════════════════════════════════════
-const isMiniPay = () => !!(window.ethereum && window.ethereum.isMiniPay);
+const isMiniPay    = () => !!(window.ethereum && window.ethereum.isMiniPay);
+const isBaseApp    = () => !!(window.ethereum && window.ethereum.isCoinbaseWallet);
 
 // ════════════════════════════════════════════════════════════════
 //  Init
@@ -1200,7 +1202,7 @@ window.addEventListener('load', async () => {
       if (CHAINS[id]) {
         selectedChainId = id;
         cfg.chainId = id;
-        localStorage.setItem('cm_cfg', JSON.stringify(cfg));
+        localStorage.setItem('bm_cfg', JSON.stringify(cfg));
         applyChainTheme(id);
         applyChainAddresses(id);
         updateChainBadge();
@@ -1215,6 +1217,10 @@ window.addEventListener('load', async () => {
     // MiniPay: auto-connect silently on load — no prompt or button needed
     if (isMiniPay()) {
       await autoConnectMiniPay();
+    }
+    // Base app (Coinbase Wallet): auto-connect silently on load
+    else if (isBaseApp()) {
+      await autoConnectBaseApp();
     }
   }
 });
@@ -1251,13 +1257,69 @@ async function autoConnectMiniPay() {
   }
 }
 
+async function autoConnectBaseApp() {
+  try {
+    // Try to switch the wallet to Base Mainnet automatically
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x2105' }], // 8453 = Base Mainnet
+      });
+    } catch (switchErr) {
+      // 4902 = chain not added yet — add it then retry
+      if (switchErr.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x2105',
+            chainName: 'Base',
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://mainnet.base.org'],
+            blockExplorerUrls: ['https://basescan.org'],
+          }],
+        });
+      } else {
+        throw switchErr;
+      }
+    }
+
+    // Force Base Mainnet theme and addresses
+    selectedChainId = 8453;
+    cfg.chainId     = 8453;
+    applyChainTheme(8453);
+    applyChainAddresses(8453);
+    updateChainBadge();
+    renderChainList();
+
+    // Show Base App badge in topbar
+    const badge = document.getElementById('baseapp-badge');
+    if (badge) badge.classList.remove('hidden');
+    // Hide the connect-wallet button — implicit in Base app
+    const wbtn = document.getElementById('wallet-btn');
+    if (wbtn) wbtn.style.display = 'none';
+    // Hide chain switcher — Base app is locked to Base
+    const cbtn = document.getElementById('chain-badge-btn');
+    if (cbtn) cbtn.style.display = 'none';
+
+    const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    address  = accs[0];
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer   = await provider.getSigner();
+    updateWalletUI();
+    initContracts();
+    toast('Base app connected', shortAddr(address), 'success');
+  } catch(e) {
+    toast('Base app connect failed', e.message, 'error');
+  }
+}
+
 function loadStoredConfig() {
   try {
-    const s = localStorage.getItem('cm_cfg');
+    const s = localStorage.getItem('bm_cfg');
     if (s) {
       const c = JSON.parse(s);
       cfg = c;
-      selectedChainId = c.chainId || 42220;
+      selectedChainId = c.chainId || 8453;
     }
   } catch(e) {}
   // Always seed addresses from CHAINS registry for the current chain,
@@ -1269,7 +1331,7 @@ function loadStoredConfig() {
 // localStorage overrides. localStorage wins so the deployer can test overrides.
 function applyChainAddresses(chainId) {
   const chain   = CHAINS[chainId];
-  const stored  = (() => { try { return JSON.parse(localStorage.getItem('cm_cfg')) || {}; } catch(e) { return {}; } })();
+  const stored  = (() => { try { return JSON.parse(localStorage.getItem('bm_cfg')) || {}; } catch(e) { return {}; } })();
 
   const token = (chainId === (stored.chainId || chainId) && stored.cball) || chain?.contracts?.token || '';
   const miner = (chainId === (stored.chainId || chainId) && stored.miner) || chain?.contracts?.miner || '';
@@ -1298,7 +1360,7 @@ function saveConfig() {
   cfg.miner   = document.getElementById('cfg-miner').value.trim();
   cfg.badge   = document.getElementById('cfg-badge').value.trim();
   cfg.chainId = selectedChainId;
-  localStorage.setItem('cm_cfg', JSON.stringify(cfg));
+  localStorage.setItem('bm_cfg', JSON.stringify(cfg));
   const st = document.getElementById('config-status');
   st.textContent = '✓ Saved';
   setTimeout(() => st.textContent = '', 2500);
@@ -1446,7 +1508,7 @@ function renderChainList() {
 function selectChain(id) {
   selectedChainId = Number(id);
   cfg.chainId = selectedChainId;
-  localStorage.setItem('cm_cfg', JSON.stringify(cfg));
+  localStorage.setItem('bm_cfg', JSON.stringify(cfg));
   applyChainTheme(selectedChainId);
   applyChainAddresses(selectedChainId);
   updateChainBadge();
@@ -1466,10 +1528,11 @@ function updateChainBadge() {
 // ════════════════════════════════════════════════════════════════
 async function connectWallet() {
   if (!window.ethereum) {
-    toast('No wallet found', 'Install MetaMask or open this page inside MiniPay.', 'error');
+    toast('No wallet found', 'Install MetaMask, Coinbase Wallet, or open this page inside the Base app.', 'error');
     return;
   }
   if (isMiniPay()) { await autoConnectMiniPay(); return; }
+  if (isBaseApp())  { await autoConnectBaseApp();  return; }
   try {
     const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
     address  = accs[0];
@@ -1925,7 +1988,8 @@ async function doSetApprovalForAll(approved) {
 // ════════════════════════════════════════════════════════════════
 
 // MiniPay requires legacy (type 0) transactions — no EIP-1559 fields.
-// We pass explicit overrides when inside MiniPay so ethers doesn't
+// Base app supports EIP-1559 natively so no overrides are needed there.
+// We pass explicit overrides only inside MiniPay so ethers doesn't
 // auto-populate maxFeePerGas / maxPriorityFeePerGas.
 async function getMiniPayOverrides() {
   if (!isMiniPay() || !provider) return {};
@@ -1956,7 +2020,7 @@ function toggleCfgDrawer() {
 }
 
 function clearOverride() {
-  localStorage.removeItem('cm_cfg');
+  localStorage.removeItem('bm_cfg');
   cfg = { cball:'', miner:'', badge:'', chainId: selectedChainId };
   applyChainAddresses(selectedChainId);
   document.getElementById('cfg-drawer').classList.add('hidden');
