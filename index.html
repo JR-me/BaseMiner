@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="talentapp:project_verification" content="844641f80aba9b5074ff4bb1d834b8b8a30c0143b8c4ab544010f9021a7580255653d4aa0f0be9d59cea98d8deb8e193a8cefa7df5245b6578fd5efeba938ad6" />
+<title>ChainMiner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f13; --bg2: #1a1a22; --bg3: #22222e;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #f0eff6; --text2: #a09eb8; --text3: #5e5c78;
+    --accent: #7c5cfc; --accent2: #9d7fff; --accent-rgb: 124,92,252;
+    --green: #22c97e; --amber: #f5a623; --red: #e85454; --gold: #ffd700;
+    --radius: 12px; --radius-sm: 8px;
+    --chain-glow: rgba(124,92,252,0.18);
+  }
+
+  /* ── Global transitions for theme switching ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { transition: background-color .45s ease; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; font-size: 15px; line-height: 1.6;
+  }
+  .theme-transition { transition: background-color .45s ease, border-color .45s ease, color .3s ease; }
+
+  /* ── Topbar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 60px;
+    border-bottom: 1px solid var(--border); background: var(--bg);
+    position: sticky; top: 0; z-index: 100;
+    transition: background-color .45s ease, border-color .45s ease;
+  }
+  .topbar-accent {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); opacity: .75;
+    transition: background .45s ease;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; }
+  .logo-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--accent); display: flex; align-items: center;
+    justify-content: center; font-size: 16px; line-height: 1;
+    transition: background .45s ease;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  /* ── Chain banner ── */
+  .chain-banner {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 7px 24px; display: flex; align-items: center; gap: 10px;
+    transition: background .45s ease;
+  }
+  .chain-banner-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    transition: background .45s ease;
+  }
+  .chain-banner-name {
+    font-size: 12px; font-weight: 600; color: var(--accent);
+    letter-spacing: .04em; transition: color .45s ease;
+  }
+  .chain-banner-sep { font-size: 12px; color: var(--text3); }
+  .chain-banner-info { font-size: 12px; color: var(--text2); transition: color .3s; }
+  .chain-banner-id {
+    margin-left: auto; font-size: 11px; color: var(--text3);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Chain badge button ── */
+  .chain-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border2); background: var(--bg3); color: var(--text);
+    cursor: pointer; transition: border-color .45s ease, background .45s ease;
+  }
+  .chain-badge:hover { border-color: var(--accent); }
+  .chain-dot { width: 7px; height: 7px; border-radius: 50%; transition: background .45s ease; }
+
+  /* ── Wallet button ── */
+  .wallet-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border2); background: var(--bg3);
+    color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .wallet-btn:hover { border-color: var(--accent); background: var(--bg2); }
+  .wallet-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); transition: background .45s ease; }
+
+  /* ── Main layout ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
+  .hidden { display: none !important; }
+
+  /* ── Config card ── */
+  .config-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 24px;
+    transition: background .45s ease, border-color .45s ease;
+  }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media(max-width:700px) { .config-grid { grid-template-columns: 1fr; } }
+  .config-label {
+    font-size: 11px; color: var(--text3); font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px;
+    transition: color .3s;
+  }
+  .config-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 9px 12px;
+    color: var(--text); font-size: 13px; font-family: 'SF Mono', 'Fira Code', monospace;
+    outline: none; transition: border .15s, background .45s ease;
+  }
+  .config-input:focus { border-color: var(--accent); }
+  .config-input::placeholder { color: var(--text3); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border2); background: var(--bg3);
+    color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .1s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg2); border-color: var(--accent); }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-primary {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    transition: background .45s ease, border-color .45s ease, transform .1s;
+  }
+  .btn-primary:hover { filter: brightness(1.12); }
+  .btn-green  { background: rgba(34,201,126,.14); border-color: rgba(34,201,126,.38); color: var(--green); }
+  .btn-green:hover { background: rgba(34,201,126,.24); }
+  .btn-amber  { background: rgba(245,166,35,.12); border-color: rgba(245,166,35,.35); color: var(--amber); }
+  .btn-amber:hover { background: rgba(245,166,35,.22); }
+  .btn-gold   { background: rgba(255,215,0,.12); border-color: rgba(255,215,0,.38); color: var(--gold); }
+  .btn-gold:hover  { background: rgba(255,215,0,.22); }
+  .btn-sm  { padding: 6px 12px; font-size: 13px; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* ── Notices ── */
+  .notice {
+    padding: 12px 16px; border-radius: var(--radius-sm);
+    font-size: 13px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .notice.warn  { background: rgba(245,166,35,.1);  border: 1px solid rgba(245,166,35,.3);  color: #f5c860; }
+  .notice.info  { background: rgba(74,158,255,.1);  border: 1px solid rgba(74,158,255,.3);  color: #7dc5ff; }
+  .notice.error { background: rgba(232,84,84,.1);   border: 1px solid rgba(232,84,84,.3);   color: #f07070; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 24px;
+    background: var(--bg2); border-radius: var(--radius); padding: 4px;
+    transition: background .45s ease;
+  }
+  .tab {
+    flex: 1; padding: 9px 10px; text-align: center; border-radius: 9px;
+    font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text2);
+    border: 1px solid transparent; background: none;
+    transition: color .2s, background .15s, border-color .15s, box-shadow .45s ease;
+  }
+  .tab:hover:not(.active) { color: var(--text); }
+  .tab.active {
+    background: var(--bg3); color: var(--text); border-color: var(--border2);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Stat grid ── */
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 12px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+    transition: background .45s ease, border-color .45s ease;
+  }
+  .stat-label {
+    font-size: 11px; color: var(--text3); font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px;
+    transition: color .3s;
+  }
+  .stat-val { font-size: 24px; font-weight: 600; color: var(--text); }
+  .stat-val.green  { color: var(--green); }
+  .stat-val.amber  { color: var(--amber); }
+  .stat-val.accent { color: var(--accent2); transition: color .45s ease; }
+  .stat-val.gold   { color: var(--gold); }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; transition: color .3s; }
+
+  /* ── Mine hero ── */
+  .mine-hero {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 32px 24px;
+    text-align: center; margin-bottom: 20px;
+    box-shadow: 0 0 60px var(--chain-glow);
+    transition: box-shadow .5s ease, background .45s ease, border-color .45s ease;
+  }
+  .mine-tool-display { font-size: 60px; margin-bottom: 8px; line-height: 1; }
+  .mine-title  { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .mine-sub    { color: var(--text2); font-size: 14px; margin-bottom: 24px; transition: color .3s; }
+  .progress-bar-wrap {
+    background: var(--bg3); border-radius: 20px; height: 8px; margin: 16px 0; overflow: hidden;
+    transition: background .45s ease;
+  }
+  .progress-bar {
+    height: 100%; border-radius: 20px; background: var(--accent);
+    transition: width .4s ease, background .45s ease;
+  }
+  .progress-labels {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--text3); margin-top: 4px;
+  }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: background .45s ease, border-color .45s ease;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 12px 16px;
+    font-size: 11px; color: var(--text3); font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); background: var(--bg3);
+    transition: background .45s ease, color .3s;
+  }
+  tbody td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,.022); }
+  .rank { font-weight: 700; color: var(--text3); }
+  .rank.gold   { color: var(--gold); }
+  .rank.silver { color: #c0c0c0; }
+  .rank.bronze { color: #cd7f32; }
+  .addr { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: var(--text2); }
+  .you-badge {
+    display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px;
+    background: rgba(var(--accent-rgb),.18); border: 1px solid rgba(var(--accent-rgb),.38);
+    color: var(--accent2); font-size: 11px; font-weight: 600; margin-left: 8px;
+    transition: background .45s, border-color .45s, color .45s;
+  }
+
+  /* ── Badge cards ── */
+  .badge-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+  @media(max-width:600px) { .badge-grid { grid-template-columns: 1fr; } }
+  .badge-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; text-align: center;
+    transition: border-color .3s, background .45s ease;
+  }
+  .badge-card.eligible   { border-color: rgba(34,201,126,.4); }
+  .badge-card.claimed    { border-color: rgba(var(--accent-rgb),.5); }
+  .badge-card.legendary-card { border-color: rgba(255,215,0,.3); }
+  .badge-icon  { font-size: 44px; margin-bottom: 10px; line-height: 1; }
+  .badge-tier  { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .badge-req   { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+  .badge-claimed-tag {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+    border-radius: 20px; background: rgba(var(--accent-rgb),.18);
+    border: 1px solid rgba(var(--accent-rgb),.35);
+    color: var(--accent2); font-size: 12px; font-weight: 600;
+    transition: background .45s, border-color .45s, color .45s;
+  }
+
+  /* ── Admin ── */
+  .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:700px) { .admin-grid { grid-template-columns: 1fr; } }
+  .admin-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    transition: background .45s ease, border-color .45s ease;
+  }
+  .admin-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .admin-card-desc  { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+  .input-row { display: flex; gap: 8px; }
+  .input-row .config-input { flex: 1; }
+
+  /* ── Transfer cards ── */
+  .transfer-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    transition: background .45s ease, border-color .45s ease;
+  }
+
+  /* ── Section title ── */
+  .section-title {
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    letter-spacing: .07em; text-transform: uppercase; margin-bottom: 14px;
+    transition: color .3s;
+  }
+
+  /* ── Chain selector modal ── */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.65);
+    display: flex; align-items: center; justify-content: center; z-index: 200;
+  }
+  .overlay.hidden { display: none; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 24px; width: 360px; max-width: 95vw;
+    position: relative; overflow: hidden;
+    transition: background .45s ease;
+  }
+  .modal-strip {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent); transition: background .45s ease;
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; margin-top: 4px; }
+  .modal-sub   { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+  .chain-list  { display: flex; flex-direction: column; gap: 6px; max-height: 65vh; overflow-y: auto; padding-right: 2px; }
+  .chain-list::-webkit-scrollbar { width: 4px; }
+  .chain-list::-webkit-scrollbar-track { background: transparent; }
+  .chain-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  .chain-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 13px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); cursor: pointer; transition: all .15s;
+  }
+  .chain-item:hover { border-color: var(--accent); background: var(--bg3); }
+  .chain-item.active { border-color: var(--accent); }
+  .chain-item-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
+  .chain-item-name { font-weight: 600; font-size: 13px; }
+  .chain-item-sub  { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .chain-item-check { margin-left: auto; font-size: 14px; opacity: 0; transition: opacity .15s; }
+  .chain-item.active .chain-item-check { opacity: 1; }
+
+  /* ── Toast ── */
+  #toast-wrap {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 9999;
+  }
+  .toast {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 16px; max-width: 360px;
+    font-size: 13px; animation: toastIn .2s ease; border-left-width: 3px;
+  }
+  .toast.success { border-left-color: var(--green); }
+  .toast.error   { border-left-color: var(--red); }
+  .toast.info    { border-left-color: var(--accent); }
+  .toast-close {
+    margin-left: auto; cursor: pointer; color: var(--text3);
+    font-size: 16px; line-height: 1; padding: 0 0 0 8px; flex-shrink: 0;
+  }
+  .toast-close:hover { color: var(--text); }
+  .toast-title { font-weight: 600; margin-bottom: 2px; }
+  .toast-msg   { color: var(--text2); }
+  @keyframes toastIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
+
+  /* ── Helpers ── */
+  .spinner { width:15px; height:15px; border:2px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .tx-link { font-family:'SF Mono','Fira Code',monospace; font-size:11px; color:var(--accent2); text-decoration:none; }
+  .tx-link:hover { text-decoration:underline; }
+  .empty { text-align:center; padding:40px; color:var(--text3); }
+  .empty-icon { font-size:36px; margin-bottom:12px; }
+  .empty-text { font-size:14px; }
+  .divider { height:1px; background:var(--border); margin:20px 0; }
+  .mb16 { margin-bottom:16px; }
+
+  /* ── Admin access control ── */
+  .admin-card.locked {
+    opacity: .38; pointer-events: none; user-select: none;
+    filter: grayscale(.6);
+  }
+  .admin-locked-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; border-radius: var(--radius);
+    background: rgba(232,84,84,.08); border: 1px solid rgba(232,84,84,.25);
+    color: #f07070; font-size: 13px; margin-bottom: 20px;
+  }
+  .admin-owner-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 14px; border-radius: var(--radius-sm);
+    background: var(--bg3); border: 1px solid var(--border);
+    font-size: 12px; margin-bottom: 16px;
+  }
+  .admin-owner-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    border: 1px solid; font-family: 'SF Mono','Fira Code',monospace;
+  }
+  .admin-owner-chip.is-you {
+    background: rgba(var(--accent-rgb),.15); border-color: rgba(var(--accent-rgb),.4);
+    color: var(--accent2);
+  }
+  .admin-owner-chip.not-you {
+    background: rgba(255,255,255,.04); border-color: var(--border2);
+    color: var(--text3);
+  }
+
+  /* ── MiniPay ── */
+  .minipay-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    background: rgba(53,208,127,.15); border: 1px solid rgba(53,208,127,.4);
+    color: #35D07F;
+  }
+  /* On small screens (MiniPay phone view) tighten layout */
+  @media(max-width:480px) {
+    .topbar { padding: 0 14px; }
+    .main   { padding: 16px 12px 80px; }
+    .tabs   { gap: 1px; padding: 3px; }
+    .tab    { padding: 8px 6px; font-size: 12px; }
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mine-hero { padding: 20px 14px; }
+    .mine-tool-display { font-size: 48px; }
+    .admin-grid { grid-template-columns: 1fr; }
+    .config-grid { grid-template-columns: 1fr; }
+    .badge-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Chain Selector Modal ── -->
+<div class="overlay hidden" id="chain-modal">
+  <div class="modal">
+    <div class="modal-strip" id="modal-strip"></div>
+    <div class="modal-title">Select Network</div>
+    <div class="modal-sub" id="modal-sub">Choose the network where contracts are deployed.</div>
+    <div class="chain-list" id="chain-list"></div>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+      <button class="btn btn-sm" onclick="document.getElementById('chain-modal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <div class="topbar-accent" id="topbar-accent"></div>
+  <div class="logo">
+    <div class="logo-icon" id="logo-icon">⛏</div>
+    <span id="app-title">ChainMiner</span>
+    <span class="minipay-badge hidden" id="minipay-badge">MiniPay</span>
+  </div>
+  <div class="topbar-right">
+    <button class="chain-badge" onclick="openChainModal()" id="chain-badge-btn">
+      <div class="chain-dot" id="chain-dot" style="background:var(--red)"></div>
+      <span id="chain-name-label">No Network</span>
+    </button>
+    <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">
+      <div class="wallet-avatar" id="wallet-avatar"></div>
+      <span id="wallet-label">Connect Wallet</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Chain identity banner ── -->
+<div class="chain-banner">
+  <div class="chain-banner-dot" id="banner-dot"></div>
+  <span class="chain-banner-name" id="banner-chain-name">—</span>
+  <span class="chain-banner-sep">·</span>
+  <span class="chain-banner-info" id="banner-miner-name">—</span>
+  <span class="chain-banner-sep">·</span>
+  <span class="chain-banner-info" id="banner-token-name">—</span>
+  <span class="chain-banner-id" id="banner-chainid">—</span>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Contract Addresses — auto-loaded from CHAINS registry -->
+  <div class="config-card" id="config-section">
+
+    <!-- Shown when addresses ARE configured -->
+    <div id="cfg-status-bar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+        <span style="font-size:13px;color:var(--text2);" id="cfg-status-text">Contracts loaded from registry</span>
+        <span id="config-status" style="font-size:13px;color:var(--green);"></span>
+      </div>
+      <button class="btn btn-sm" onclick="toggleCfgDrawer()" id="cfg-toggle-btn">Override addresses</button>
+    </div>
+
+    <!-- Warning when no addresses are set for this chain -->
+    <div class="notice warn hidden" id="cfg-no-addresses" style="margin-top:12px;margin-bottom:0;">
+      ⚠️ No contract addresses are configured for this network yet.
+      Deploy the contracts first, then paste the addresses below.
+    </div>
+
+    <!-- Collapsible override drawer (hidden by default for regular players) -->
+    <div id="cfg-drawer" class="hidden" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="config-grid">
+        <div>
+          <div class="config-label" id="cfg-label-token">Token</div>
+          <input class="config-input" id="cfg-cball" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label" id="cfg-label-miner">Miner</div>
+          <input class="config-input" id="cfg-miner" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label" id="cfg-label-badge">Badge</div>
+          <input class="config-input" id="cfg-badge" placeholder="0x…" />
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveConfig()">Save & Apply</button>
+        <button class="btn btn-sm" onclick="clearOverride()">Reset to defaults</button>
+        <span style="font-size:12px;color:var(--text3);">Overrides are saved in your browser only.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network mismatch warning -->
+  <div class="notice warn hidden" id="network-warn">
+    ⚠️ Your wallet is on a different network than selected. Switch networks in your wallet or choose the matching network above.
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-mine"        onclick="switchTab('mine')">Mine</button>
+    <button class="tab"        id="tab-token"       onclick="switchTab('token')"><span id="tab-token-label">Token</span></button>
+    <button class="tab"        id="tab-badges"      onclick="switchTab('badges')">Badges</button>
+    <button class="tab"        id="tab-leaderboard" onclick="switchTab('leaderboard')">Leaderboard</button>
+    <button class="tab"        id="tab-admin"       onclick="switchTab('admin')" style="display:none;">⚙ Admin</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       MINE TAB
+  ══════════════════════════════════════════════ -->
+  <div class="panel active" id="panel-mine">
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label" id="lbl-your-mined">Your Total Mined</div>
+        <div class="stat-val green" id="stat-mined">—</div>
+        <div class="stat-sub" id="lbl-token-sym">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Your Clicks</div>
+        <div class="stat-val accent" id="stat-clicks">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current Tool</div>
+        <div class="stat-val" id="stat-tool">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="lbl-yield">Yield / Click</div>
+        <div class="stat-val amber" id="stat-yield">—</div>
+        <div class="stat-sub" id="lbl-yield-sym">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="lbl-global-minted">Global Minted</div>
+        <div class="stat-val" id="stat-global">—</div>
+        <div class="stat-sub" id="lbl-global-cap">of 1,009,400</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Global Remaining</div>
+        <div class="stat-val" id="stat-remaining">—</div>
+      </div>
+    </div>
+
+    <div class="mine-hero">
+      <div class="mine-tool-display" id="mine-tool-emoji">⛏️</div>
+      <div class="mine-title"        id="mine-tool-name">Pickaxe</div>
+      <div class="mine-sub"          id="mine-tool-desc">—</div>
+
+      <div id="progress-section">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="upgrade-bar" style="width:0%"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="progress-left">0 mined</span>
+          <span id="progress-right">100 to upgrade</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="mine-btn" onclick="doMine()" style="padding:13px 40px;font-size:16px;">
+          <span id="mine-btn-label">⛏&nbsp; Mine</span>
+        </button>
+        <button class="btn btn-amber" id="upgrade-btn" onclick="doUpgrade()">
+          ⬆&nbsp; Upgrade Tool
+        </button>
+        <button class="btn btn-sm" onclick="refreshMineData()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="section-title">Game Constants</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+      <div class="stat-card" style="padding:12px 16px;">
+        <div class="stat-label">Pickaxe Yield</div>
+        <div style="font-size:18px;font-weight:600;">1 <span class="tok-sym" style="font-size:13px;color:var(--text3)">—</span>/click</div>
+      </div>
+      <div class="stat-card" style="padding:12px 16px;">
+        <div class="stat-label">Drill Yield</div>
+        <div style="font-size:18px;font-weight:600;">3 <span class="tok-sym" style="font-size:13px;color:var(--text3)">—</span>/click</div>
+      </div>
+      <div class="stat-card" style="padding:12px 16px;">
+        <div class="stat-label">Excavator Yield</div>
+        <div style="font-size:18px;font-weight:600;">9 <span class="tok-sym" style="font-size:13px;color:var(--text3)">—</span>/click</div>
+      </div>
+      <div class="stat-card" style="padding:12px 16px;">
+        <div class="stat-label">Drill Threshold</div>
+        <div style="font-size:18px;font-weight:600;">100 <span class="tok-sym" style="font-size:13px;color:var(--text3)">—</span></div>
+      </div>
+      <div class="stat-card" style="padding:12px 16px;">
+        <div class="stat-label">Excavator Threshold</div>
+        <div style="font-size:18px;font-weight:600;">400 <span class="tok-sym" style="font-size:13px;color:var(--text3)">—</span></div>
+      </div>
+      <div class="stat-card" style="padding:12px 16px;">
+        <div class="stat-label">Max Per User</div>
+        <div style="font-size:18px;font-weight:600;">9,800 <span class="tok-sym" style="font-size:13px;color:var(--text3)">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       TOKEN TAB
+  ══════════════════════════════════════════════ -->
+  <div class="panel" id="panel-token">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label" id="lbl-tok-balance">Your Balance</div>
+        <div class="stat-val green" id="tok-balance">—</div>
+        <div class="stat-sub tok-sym">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Supply</div>
+        <div class="stat-val" id="tok-supply">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Max Supply</div>
+        <div class="stat-val amber">1,009,400</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Minter Address</div>
+        <div class="stat-val" id="tok-minter" style="font-size:12px;font-family:'SF Mono',monospace;word-break:break-all;">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Token Paused</div>
+        <div class="stat-val" id="tok-paused">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Owner</div>
+        <div class="stat-val" id="tok-owner" style="font-size:12px;font-family:'SF Mono',monospace;word-break:break-all;">—</div>
+      </div>
+    </div>
+
+    <div class="transfer-card mb16">
+      <div class="section-title" id="lbl-transfer-title">Transfer Token</div>
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;margin-bottom:10px;">
+        <div>
+          <div class="config-label">Recipient Address</div>
+          <input class="config-input" id="tx-to" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label">Amount</div>
+          <input class="config-input" id="tx-amount" type="number" min="1" placeholder="0" />
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-send-token" onclick="doTransfer()">Send</button>
+    </div>
+
+    <div class="transfer-card mb16">
+      <div class="section-title">Approve Spender</div>
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;margin-bottom:10px;">
+        <div>
+          <div class="config-label">Spender Address</div>
+          <input class="config-input" id="ap-spender" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label">Amount</div>
+          <input class="config-input" id="ap-amount" type="number" min="0" placeholder="0" />
+        </div>
+      </div>
+      <button class="btn btn-amber" onclick="doApprove()">Approve</button>
+    </div>
+
+    <div class="transfer-card">
+      <div class="section-title">Check Allowance</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <div class="config-label">Owner</div>
+          <input class="config-input" id="al-owner" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label">Spender</div>
+          <input class="config-input" id="al-spender" placeholder="0x…" />
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn" onclick="doCheckAllowance()">Check</button>
+        <span id="al-result" style="font-size:14px;color:var(--text2);"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       BADGES TAB
+  ══════════════════════════════════════════════ -->
+  <div class="panel" id="panel-badges">
+    <div class="notice info hidden" id="badge-connect-notice">
+      Connect your wallet to check badge eligibility.
+    </div>
+
+    <div class="badge-grid">
+      <div class="badge-card" id="badge-common">
+        <div class="badge-icon">⛏️</div>
+        <div class="badge-tier">Common</div>
+        <div class="badge-req" id="badge-common-req">Reach 400 tokens mined<br/>(Excavator tier)</div>
+        <div id="badge-common-action">
+          <button class="btn btn-full" disabled>—</button>
+        </div>
+      </div>
+      <div class="badge-card" id="badge-rare">
+        <div class="badge-icon">💎</div>
+        <div class="badge-tier" style="color:#4a9eff;">Rare</div>
+        <div class="badge-req" id="badge-rare-req">Reach 9,800 tokens mined<br/>Open to all players</div>
+        <div id="badge-rare-action">
+          <button class="btn btn-full" disabled>—</button>
+        </div>
+      </div>
+      <div class="badge-card legendary-card" id="badge-legendary">
+        <div class="badge-icon">⭐</div>
+        <div class="badge-tier" style="color:var(--gold);">Legendary</div>
+        <div class="badge-req" id="badge-legendary-req">9,800 mined + Top-10 leaderboard<br/>Only 10 ever minted</div>
+        <div id="badge-legendary-action">
+          <button class="btn btn-full" disabled>—</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Badge Supply</div>
+    <div class="stat-grid" style="margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-label">Common Minted</div>
+        <div class="stat-val" id="badge-common-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rare Minted</div>
+        <div class="stat-val" id="badge-rare-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Legendary Minted</div>
+        <div class="stat-val gold" id="badge-legendary-count">—</div>
+        <div class="stat-sub">of 10 max</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Badge Paused</div>
+        <div class="stat-val" id="badge-paused">—</div>
+      </div>
+    </div>
+
+    <div class="section-title">Transfer Badge NFT</div>
+    <div class="transfer-card">
+      <div style="display:grid;grid-template-columns:1fr 1fr 110px;gap:10px;margin-bottom:10px;">
+        <div>
+          <div class="config-label">From</div>
+          <input class="config-input" id="nft-from" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label">To</div>
+          <input class="config-input" id="nft-to" placeholder="0x…" />
+        </div>
+        <div>
+          <div class="config-label">Token ID</div>
+          <input class="config-input" id="nft-tokenid" type="number" min="1" placeholder="1" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="doNftTransfer(false)">Transfer</button>
+        <button class="btn" onclick="doNftTransfer(true)">Safe Transfer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       LEADERBOARD TAB
+  ══════════════════════════════════════════════ -->
+  <div class="panel" id="panel-leaderboard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-title" style="margin:0;" id="lbl-lb-title">Top 10 Miners</div>
+      <button class="btn btn-sm" onclick="loadLeaderboard()">↻ Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:60px;">Rank</th>
+            <th>Address</th>
+            <th style="text-align:right;" id="lbl-lb-col">Total Mined</th>
+            <th style="text-align:right;">On Board</th>
+          </tr>
+        </thead>
+        <tbody id="lb-body">
+          <tr><td colspan="4">
+            <div class="empty">
+              <div class="empty-icon">🏆</div>
+              <div class="empty-text">Connect wallet and apply contract addresses to see the leaderboard.</div>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ADMIN TAB
+  ══════════════════════════════════════════════ -->
+  <div class="panel" id="panel-admin">
+    <!-- Populated by checkAdminAccess() -->
+    <div id="admin-access-header"></div>
+
+    <div class="section-title" id="lbl-admin-token-section">Token Admin</div>
+    <div class="admin-grid mb16" id="admin-grid-token">
+      <div class="admin-card" id="adm-card-pause-token">
+        <div class="admin-card-title" id="lbl-admin-pause-token">Pause Token</div>
+        <div class="admin-card-desc">Halt all minting and transfers immediately.</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-amber" onclick="doTokenPause(true)">Pause</button>
+          <button class="btn btn-green" onclick="doTokenPause(false)">Unpause</button>
+        </div>
+      </div>
+      <div class="admin-card" id="adm-card-setminter">
+        <div class="admin-card-title">Set Minter (one-shot)</div>
+        <div class="admin-card-desc">Initial wiring — callable only when no minter is set yet.</div>
+        <div class="input-row">
+          <input class="config-input" id="adm-setminter" placeholder="0x minter address" />
+          <button class="btn btn-primary" onclick="doSetMinter()">Set</button>
+        </div>
+      </div>
+      <div class="admin-card" id="adm-card-updateminter">
+        <div class="admin-card-title">Update Minter</div>
+        <div class="admin-card-desc">Emergency replacement for a compromised or buggy minter.</div>
+        <div class="input-row">
+          <input class="config-input" id="adm-updateminter" placeholder="0x new minter" />
+          <button class="btn btn-amber" onclick="doUpdateMinter()">Update</button>
+        </div>
+      </div>
+      <div class="admin-card" id="adm-card-token-ownership">
+        <div class="admin-card-title" id="lbl-admin-token-ownership">Transfer Token Ownership</div>
+        <div class="admin-card-desc">Nominate new owner (two-step). New owner must call acceptOwnership().</div>
+        <div class="input-row" style="margin-bottom:8px;">
+          <input class="config-input" id="adm-cball-newowner" placeholder="0x new owner" />
+          <button class="btn" onclick="doTransferOwnership('cball')">Nominate</button>
+        </div>
+        <button class="btn btn-green btn-sm btn-full" onclick="doAcceptOwnership('cball')">Accept Ownership (as new owner)</button>
+      </div>
+    </div>
+
+    <div class="section-title" id="lbl-admin-miner-section">Miner Admin</div>
+    <div class="admin-grid mb16" id="admin-grid-miner">
+      <div class="admin-card" id="adm-card-pause-miner">
+        <div class="admin-card-title" id="lbl-admin-pause-miner">Pause Miner</div>
+        <div class="admin-card-desc">Halt mine() and upgrade() instantly.</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-amber" onclick="doMinerPause(true)">Pause</button>
+          <button class="btn btn-green" onclick="doMinerPause(false)">Unpause</button>
+        </div>
+      </div>
+      <div class="admin-card" id="adm-card-miner-ownership">
+        <div class="admin-card-title" id="lbl-admin-miner-ownership">Transfer Miner Ownership</div>
+        <div class="admin-card-desc">Nominate a new owner (two-step).</div>
+        <div class="input-row" style="margin-bottom:8px;">
+          <input class="config-input" id="adm-miner-newowner" placeholder="0x new owner" />
+          <button class="btn" onclick="doTransferOwnership('miner')">Nominate</button>
+        </div>
+        <button class="btn btn-green btn-sm btn-full" onclick="doAcceptOwnership('miner')">Accept Ownership</button>
+      </div>
+    </div>
+
+    <div class="section-title" id="lbl-admin-badge-section">Badge Admin</div>
+    <div class="admin-grid" id="admin-grid-badge">
+      <div class="admin-card" id="adm-card-pause-badge">
+        <div class="admin-card-title" id="lbl-admin-pause-badge">Pause Badge</div>
+        <div class="admin-card-desc">Halt badge claiming. Token transfers remain active.</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-amber" onclick="doBadgePause(true)">Pause</button>
+          <button class="btn btn-green" onclick="doBadgePause(false)">Unpause</button>
+        </div>
+      </div>
+      <div class="admin-card" id="adm-card-badge-ownership">
+        <div class="admin-card-title" id="lbl-admin-badge-ownership">Transfer Badge Ownership</div>
+        <div class="admin-card-desc">Nominate a new owner (two-step).</div>
+        <div class="input-row" style="margin-bottom:8px;">
+          <input class="config-input" id="adm-badge-newowner" placeholder="0x new owner" />
+          <button class="btn" onclick="doTransferOwnership('badge')">Nominate</button>
+        </div>
+        <button class="btn btn-green btn-sm btn-full" onclick="doAcceptOwnership('badge')">Accept Ownership</button>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">Approve NFT (single token)</div>
+        <div class="admin-card-desc">Approve an address to transfer a specific token ID.</div>
+        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin-bottom:8px;">
+          <input class="config-input" id="adm-nft-approveto" placeholder="0x approved address" />
+          <input class="config-input" id="adm-nft-tokenid" type="number" placeholder="Token ID" />
+        </div>
+        <button class="btn btn-sm" onclick="doNftApprove()">Approve Token</button>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">Set Approval For All</div>
+        <div class="admin-card-desc">Grant or revoke operator access for all your badges.</div>
+        <div class="input-row" style="margin-bottom:8px;">
+          <input class="config-input" id="adm-nft-operator" placeholder="0x operator" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-green btn-sm" onclick="doSetApprovalForAll(true)">Grant All</button>
+          <button class="btn btn-amber btn-sm" onclick="doSetApprovalForAll(false)">Revoke All</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+<div id="toast-wrap"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  ABIs
+// ════════════════════════════════════════════════════════════════
+const CBALL_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address,address) view returns (uint256)",
+  "function owner() view returns (address)",
+  "function pendingOwner() view returns (address)",
+  "function minter() view returns (address)",
+  "function paused() view returns (bool)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function transfer(address,uint256) returns (bool)",
+  "function transferFrom(address,address,uint256) returns (bool)",
+  "function approve(address,uint256) returns (bool)",
+  "function setMinter(address)",
+  "function updateMinter(address)",
+  "function transferOwnership(address)",
+  "function acceptOwnership()",
+  "function pause()",
+  "function unpause()"
+];
+const MINER_ABI = [
+  "function token() view returns (address)",
+  "function owner() view returns (address)",
+  "function paused() view returns (bool)",
+  "function miners(address) view returns (uint256,uint256,uint8)",
+  "function totalMinted() view returns (uint256)",
+  "function MAX_CBALL_GLOBAL() view returns (uint256)",
+  "function MAX_CBALL_PER_USER() view returns (uint256)",
+  "function globalSupplyRemaining() view returns (uint256)",
+  "function getLeaderboard() view returns (address[],uint256[])",
+  "function getStats(address) view returns (uint256,uint256,uint8,uint256)",
+  "function bBallToNextUpgrade(address) view returns (uint256)",
+  "function isOnLeaderboard(address) view returns (bool)",
+  "function mine()",
+  "function upgrade()",
+  "function transferOwnership(address)",
+  "function acceptOwnership()",
+  "function pause()",
+  "function unpause()"
+];
+const BADGE_ABI = [
+  "function game() view returns (address)",
+  "function owner() view returns (address)",
+  "function paused() view returns (bool)",
+  "function legendaryCount() view returns (uint256)",
+  "function rareCount() view returns (uint256)",
+  "function commonCount() view returns (uint256)",
+  "function MAX_LEGENDARY() view returns (uint256)",
+  "function hasClaimedTier(address,uint8) view returns (bool)",
+  "function tokenOfOwnerByTier(address,uint8) view returns (uint256)",
+  "function tierOf(uint256) view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function ownerOf(uint256) view returns (address)",
+  "function getApproved(uint256) view returns (address)",
+  "function isApprovedForAll(address,address) view returns (bool)",
+  "function eligibility(address) view returns (bool,bool,bool,bool,bool,bool,uint256)",
+  "function tokenURI(uint256) view returns (string)",
+  "function claimCommon()",
+  "function claimRare()",
+  "function claimLegendary()",
+  "function approve(address,uint256)",
+  "function setApprovalForAll(address,bool)",
+  "function transferFrom(address,address,uint256)",
+  "function safeTransferFrom(address,address,uint256)",
+  "function safeTransferFrom(address,address,uint256,bytes)",
+  "function transferOwnership(address)",
+  "function acceptOwnership()",
+  "function pause()",
+  "function unpause()"
+];
+
+// ════════════════════════════════════════════════════════════════
+//  Chain registry — brand colours + identity per network
+//  ── HOW TO DEPLOY ──────────────────────────────────────────────
+//  After running deploy_baseminer.py, paste the three addresses
+//  from deployment.json into the matching chain entry below.
+//  Players will get them automatically — no manual input needed.
+// ════════════════════════════════════════════════════════════════
+const CHAINS = {
+  42220: {
+    name:"Celo Mainnet", short:"Celo", icon:"🌿",
+    rpc:"https://forno.celo.org", explorer:"https://celoscan.io",
+    theme:{ accent:"#35D07F",accent2:"#52e89a",accentRgb:"53,208,127",
+            bg:"#07100a",bg2:"#0d1d11",bg3:"#132718",
+            text2:"#72b88a",text3:"#3a5e47",glow:"rgba(53,208,127,0.16)" },
+    minerName:"CeloMiner", tokenSymbol:"cBALL", badgeName:"CeloBadge",
+    appTitle:"CeloMiner", logoEmoji:"🌿",
+    // ↓ Paste your deployed addresses here after running deploy_baseminer.py
+    contracts:{ token:"0xfa83D5f40425Cdb7139855b3641869D003b0E8ab", miner:"0x1f22f19a18038D9FB2b51BFb0878227f1926233f", badge:"0xc516406230FF9AdD7138808Df3948636aeAaC44c" }
+  },
+  44787: {
+    name:"Celo Alfajores", short:"Alfajores", icon:"🌱",
+    rpc:"https://alfajores-forno.celo-testnet.org", explorer:"https://alfajores.celoscan.io",
+    theme:{ accent:"#35D07F",accent2:"#52e89a",accentRgb:"53,208,127",
+            bg:"#07100a",bg2:"#0d1d11",bg3:"#132718",
+            text2:"#72b88a",text3:"#3a5e47",glow:"rgba(53,208,127,0.16)" },
+    minerName:"CeloMiner", tokenSymbol:"cBALL", badgeName:"CeloBadge",
+    appTitle:"CeloMiner · Testnet", logoEmoji:"🌱",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  1: {
+    name:"Ethereum Mainnet", short:"Ethereum", icon:"◆",
+    rpc:"https://cloudflare-eth.com", explorer:"https://etherscan.io",
+    theme:{ accent:"#627EEA",accent2:"#8198ee",accentRgb:"98,126,234",
+            bg:"#0b0b14",bg2:"#12121f",bg3:"#191929",
+            text2:"#8088b4",text3:"#454a6a",glow:"rgba(98,126,234,0.16)" },
+    minerName:"EthMiner", tokenSymbol:"eBall", badgeName:"EthBadge",
+    appTitle:"EthMiner", logoEmoji:"◆",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  11155111: {
+    name:"Sepolia Testnet", short:"Sepolia", icon:"🔷",
+    rpc:"https://rpc.sepolia.org", explorer:"https://sepolia.etherscan.io",
+    theme:{ accent:"#627EEA",accent2:"#8198ee",accentRgb:"98,126,234",
+            bg:"#0b0b14",bg2:"#12121f",bg3:"#191929",
+            text2:"#8088b4",text3:"#454a6a",glow:"rgba(98,126,234,0.16)" },
+    minerName:"EthMiner", tokenSymbol:"eBall", badgeName:"EthBadge",
+    appTitle:"EthMiner · Testnet", logoEmoji:"🔷",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  8453: {
+    name:"Base", short:"Base", icon:"🔵",
+    rpc:"https://mainnet.base.org", explorer:"https://basescan.org",
+    theme:{ accent:"#0052FF",accent2:"#3375ff",accentRgb:"0,82,255",
+            bg:"#070a14",bg2:"#0c1120",bg3:"#10182e",
+            text2:"#6080c0",text3:"#364870",glow:"rgba(0,82,255,0.18)" },
+    minerName:"BaseMiner", tokenSymbol:"bBall", badgeName:"BaseBadge",
+    appTitle:"BaseMiner", logoEmoji:"🔵",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  84532: {
+    name:"Base Sepolia", short:"Base Testnet", icon:"🔹",
+    rpc:"https://sepolia.base.org", explorer:"https://sepolia.basescan.org",
+    theme:{ accent:"#0052FF",accent2:"#3375ff",accentRgb:"0,82,255",
+            bg:"#070a14",bg2:"#0c1120",bg3:"#10182e",
+            text2:"#6080c0",text3:"#364870",glow:"rgba(0,82,255,0.18)" },
+    minerName:"BaseMiner", tokenSymbol:"bBall", badgeName:"BaseBadge",
+    appTitle:"BaseMiner · Testnet", logoEmoji:"🔹",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  42161: {
+    name:"Arbitrum One", short:"Arbitrum", icon:"🌀",
+    rpc:"https://arb1.arbitrum.io/rpc", explorer:"https://arbiscan.io",
+    theme:{ accent:"#28A0F0",accent2:"#56b8f5",accentRgb:"40,160,240",
+            bg:"#07101a",bg2:"#0d1825",bg3:"#112032",
+            text2:"#5898c0",text3:"#305870",glow:"rgba(40,160,240,0.17)" },
+    minerName:"ArbMiner", tokenSymbol:"aBall", badgeName:"ArbBadge",
+    appTitle:"ArbMiner", logoEmoji:"🌀",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  421614: {
+    name:"Arbitrum Sepolia", short:"Arb Testnet", icon:"💧",
+    rpc:"https://sepolia-rollup.arbitrum.io/rpc", explorer:"https://sepolia.arbiscan.io",
+    theme:{ accent:"#28A0F0",accent2:"#56b8f5",accentRgb:"40,160,240",
+            bg:"#07101a",bg2:"#0d1825",bg3:"#112032",
+            text2:"#5898c0",text3:"#305870",glow:"rgba(40,160,240,0.17)" },
+    minerName:"ArbMiner", tokenSymbol:"aBall", badgeName:"ArbBadge",
+    appTitle:"ArbMiner · Testnet", logoEmoji:"💧",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  137: {
+    name:"Polygon", short:"Polygon", icon:"⬡",
+    rpc:"https://polygon-rpc.com", explorer:"https://polygonscan.com",
+    theme:{ accent:"#8247E5",accent2:"#a36cec",accentRgb:"130,71,229",
+            bg:"#0b0814",bg2:"#13101e",bg3:"#1a1428",
+            text2:"#9070c0",text3:"#503868",glow:"rgba(130,71,229,0.17)" },
+    minerName:"PolyMiner", tokenSymbol:"pBall", badgeName:"PolyBadge",
+    appTitle:"PolyMiner", logoEmoji:"⬡",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  80002: {
+    name:"Polygon Amoy", short:"Amoy", icon:"🔮",
+    rpc:"https://rpc-amoy.polygon.technology", explorer:"https://amoy.polygonscan.com",
+    theme:{ accent:"#8247E5",accent2:"#a36cec",accentRgb:"130,71,229",
+            bg:"#0b0814",bg2:"#13101e",bg3:"#1a1428",
+            text2:"#9070c0",text3:"#503868",glow:"rgba(130,71,229,0.17)" },
+    minerName:"PolyMiner", tokenSymbol:"pBall", badgeName:"PolyBadge",
+    appTitle:"PolyMiner · Testnet", logoEmoji:"🔮",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  10: {
+    name:"Optimism", short:"Optimism", icon:"🔴",
+    rpc:"https://mainnet.optimism.io", explorer:"https://optimistic.etherscan.io",
+    theme:{ accent:"#FF0420",accent2:"#ff3d54",accentRgb:"255,4,32",
+            bg:"#130508",bg2:"#1e090c",bg3:"#280e12",
+            text2:"#b85060",text3:"#6e2a34",glow:"rgba(255,4,32,0.15)" },
+    minerName:"OptMiner", tokenSymbol:"oBall", badgeName:"OptBadge",
+    appTitle:"OptMiner", logoEmoji:"🔴",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  11155420: {
+    name:"OP Sepolia", short:"OP Testnet", icon:"🟥",
+    rpc:"https://sepolia.optimism.io", explorer:"https://sepolia-optimism.etherscan.io",
+    theme:{ accent:"#FF0420",accent2:"#ff3d54",accentRgb:"255,4,32",
+            bg:"#130508",bg2:"#1e090c",bg3:"#280e12",
+            text2:"#b85060",text3:"#6e2a34",glow:"rgba(255,4,32,0.15)" },
+    minerName:"OptMiner", tokenSymbol:"oBall", badgeName:"OptBadge",
+    appTitle:"OptMiner · Testnet", logoEmoji:"🟥",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  43114: {
+    name:"Avalanche C-Chain", short:"Avalanche", icon:"🏔",
+    rpc:"https://api.avax.network/ext/bc/C/rpc", explorer:"https://snowtrace.io",
+    theme:{ accent:"#E84142",accent2:"#f06062",accentRgb:"232,65,66",
+            bg:"#120707",bg2:"#1c0e0e",bg3:"#261313",
+            text2:"#b86060",text3:"#703030",glow:"rgba(232,65,66,0.16)" },
+    minerName:"AvaxMiner", tokenSymbol:"avBall", badgeName:"AvaxBadge",
+    appTitle:"AvaxMiner", logoEmoji:"🏔",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  56: {
+    name:"BNB Smart Chain", short:"BNB Chain", icon:"◉",
+    rpc:"https://bsc-dataseed.binance.org", explorer:"https://bscscan.com",
+    theme:{ accent:"#F0B90B",accent2:"#f5cc40",accentRgb:"240,185,11",
+            bg:"#0f0d02",bg2:"#191503",bg3:"#221d05",
+            text2:"#b09830",text3:"#685810",glow:"rgba(240,185,11,0.15)" },
+    minerName:"BNBMiner", tokenSymbol:"bnBall", badgeName:"BNBBadge",
+    appTitle:"BNBMiner", logoEmoji:"◉",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  59144: {
+    name:"Linea", short:"Linea", icon:"∞",
+    rpc:"https://rpc.linea.build", explorer:"https://lineascan.build",
+    theme:{ accent:"#61DFFF",accent2:"#8eeaff",accentRgb:"97,223,255",
+            bg:"#070b10",bg2:"#0c131c",bg3:"#101c28",
+            text2:"#50a0bc",text3:"#2c5870",glow:"rgba(97,223,255,0.14)" },
+    minerName:"LineaMiner", tokenSymbol:"lBall", badgeName:"LineaBadge",
+    appTitle:"LineaMiner", logoEmoji:"∞",
+    contracts:{ token:"", miner:"", badge:"" }
+  },
+  324: {
+    name:"zkSync Era", short:"zkSync", icon:"⚡",
+    rpc:"https://mainnet.era.zksync.io", explorer:"https://explorer.zksync.io",
+    theme:{ accent:"#1755F4",accent2:"#4474f8",accentRgb:"23,85,244",
+            bg:"#070a14",bg2:"#0c1120",bg3:"#10192e",
+            text2:"#5880c8",text3:"#304070",glow:"rgba(23,85,244,0.18)" },
+    minerName:"zkMiner", tokenSymbol:"zBall", badgeName:"zkBadge",
+    appTitle:"zkMiner", logoEmoji:"⚡",
+    contracts:{ token:"", miner:"", badge:"" }
+  }
+};
+
+// ════════════════════════════════════════════════════════════════
+//  App state
+// ════════════════════════════════════════════════════════════════
+let provider = null, signer = null, address = null;
+let selectedChainId = 42220;
+let contracts = { cball:null, miner:null, badge:null };
+let cfg = { cball:'', miner:'', badge:'', chainId:42220 };
+
+const TOOL_NAMES  = ['Pickaxe','Drill','Excavator'];
+const TOOL_EMOJIS = ['⛏️','🔩','🏗️'];
+
+// ════════════════════════════════════════════════════════════════
+//  MiniPay detection
+// ════════════════════════════════════════════════════════════════
+const isMiniPay = () => !!(window.ethereum && window.ethereum.isMiniPay);
+
+// ════════════════════════════════════════════════════════════════
+//  Init
+// ════════════════════════════════════════════════════════════════
+window.addEventListener('load', async () => {
+  loadStoredConfig();
+  applyChainTheme(selectedChainId);
+  renderChainList();
+  updateChainBadge();
+
+  if (window.ethereum) {
+    window.ethereum.on('accountsChanged', accs => {
+      address = accs[0] || null;
+      updateWalletUI();
+      if (address) initContracts();
+    });
+    window.ethereum.on('chainChanged', hex => {
+      const id = parseInt(hex, 16);
+      if (CHAINS[id]) {
+        selectedChainId = id;
+        cfg.chainId = id;
+        localStorage.setItem('cm_cfg', JSON.stringify(cfg));
+        applyChainTheme(id);
+        applyChainAddresses(id);
+        updateChainBadge();
+        renderChainList();
+        if (provider) checkNetworkMatch();
+        initContracts();
+      } else {
+        window.location.reload();
+      }
+    });
+
+    // MiniPay: auto-connect silently on load — no prompt or button needed
+    if (isMiniPay()) {
+      await autoConnectMiniPay();
+    }
+  }
+});
+
+async function autoConnectMiniPay() {
+  try {
+    // MiniPay is Celo-only — force Celo mainnet theme and addresses
+    selectedChainId = 42220;
+    cfg.chainId     = 42220;
+    applyChainTheme(42220);
+    applyChainAddresses(42220);
+    updateChainBadge();
+    renderChainList();
+
+    // Show MiniPay badge in topbar
+    const badge = document.getElementById('minipay-badge');
+    if (badge) badge.classList.remove('hidden');
+    // Hide the connect-wallet button — implicit in MiniPay
+    const wbtn = document.getElementById('wallet-btn');
+    if (wbtn) wbtn.style.display = 'none';
+    // Hide chain switcher — MiniPay only runs on Celo
+    const cbtn = document.getElementById('chain-badge-btn');
+    if (cbtn) cbtn.style.display = 'none';
+
+    const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    address  = accs[0];
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer   = await provider.getSigner();
+    updateWalletUI();
+    initContracts();
+    toast('MiniPay connected', shortAddr(address), 'success');
+  } catch(e) {
+    toast('MiniPay connect failed', e.message, 'error');
+  }
+}
+
+function loadStoredConfig() {
+  try {
+    const s = localStorage.getItem('cm_cfg');
+    if (s) {
+      const c = JSON.parse(s);
+      cfg = c;
+      selectedChainId = c.chainId || 42220;
+    }
+  } catch(e) {}
+  // Always seed addresses from CHAINS registry for the current chain,
+  // then overlay any localStorage overrides on top.
+  applyChainAddresses(selectedChainId);
+}
+
+// Pull addresses from CHAINS registry for a given chain and merge with any
+// localStorage overrides. localStorage wins so the deployer can test overrides.
+function applyChainAddresses(chainId) {
+  const chain   = CHAINS[chainId];
+  const stored  = (() => { try { return JSON.parse(localStorage.getItem('cm_cfg')) || {}; } catch(e) { return {}; } })();
+
+  const token = (chainId === (stored.chainId || chainId) && stored.cball) || chain?.contracts?.token || '';
+  const miner = (chainId === (stored.chainId || chainId) && stored.miner) || chain?.contracts?.miner || '';
+  const badge = (chainId === (stored.chainId || chainId) && stored.badge) || chain?.contracts?.badge || '';
+
+  cfg.cball = token;
+  cfg.miner = miner;
+  cfg.badge = badge;
+
+  // Update the input fields
+  const ti = document.getElementById('cfg-cball');
+  const mi = document.getElementById('cfg-miner');
+  const bi = document.getElementById('cfg-badge');
+  if (ti) ti.value = token;
+  if (mi) mi.value = miner;
+  if (bi) bi.value = badge;
+
+  // Show/hide the "no addresses" warning in the config drawer
+  const hasAll = token && miner && badge;
+  const warn   = document.getElementById('cfg-no-addresses');
+  if (warn) warn.classList.toggle('hidden', !!hasAll);
+}
+
+function saveConfig() {
+  cfg.cball   = document.getElementById('cfg-cball').value.trim();
+  cfg.miner   = document.getElementById('cfg-miner').value.trim();
+  cfg.badge   = document.getElementById('cfg-badge').value.trim();
+  cfg.chainId = selectedChainId;
+  localStorage.setItem('cm_cfg', JSON.stringify(cfg));
+  const st = document.getElementById('config-status');
+  st.textContent = '✓ Saved';
+  setTimeout(() => st.textContent = '', 2500);
+  // Collapse the drawer after saving
+  const drawer = document.getElementById('cfg-drawer');
+  if (drawer) drawer.classList.add('hidden');
+  initContracts();
+  toast('Addresses saved', CHAINS[selectedChainId]?.minerName + ' contracts applied.', 'success');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Theme + Identity
+// ════════════════════════════════════════════════════════════════
+function applyChainTheme(id) {
+  const c = CHAINS[id];
+  if (!c) return;
+  const t = c.theme;
+  const r = document.documentElement;
+
+  r.style.setProperty('--accent',     t.accent);
+  r.style.setProperty('--accent2',    t.accent2);
+  r.style.setProperty('--accent-rgb', t.accentRgb);
+  r.style.setProperty('--bg',         t.bg);
+  r.style.setProperty('--bg2',        t.bg2);
+  r.style.setProperty('--bg3',        t.bg3);
+  r.style.setProperty('--text2',      t.text2);
+  r.style.setProperty('--text3',      t.text3);
+  r.style.setProperty('--chain-glow', t.glow);
+  document.body.style.backgroundColor = t.bg;
+
+  setText('topbar-accent',      null, t.accent, 'background');
+  setText('modal-strip',        null, t.accent, 'background');
+  setText('logo-icon',          c.logoEmoji);
+  document.getElementById('logo-icon').style.background = t.accent;
+  setText('app-title',          c.appTitle);
+  document.title = c.appTitle;
+
+  // Banner
+  setText('banner-chain-name', c.name);
+  setText('banner-miner-name', c.minerName);
+  setText('banner-token-name', c.tokenSymbol + ' Token');
+  setText('banner-chainid',    'chain ' + id);
+  const bd = document.getElementById('banner-dot');
+  if (bd) { bd.style.background = t.accent; }
+  const bn = document.getElementById('banner-chain-name');
+  if (bn) bn.style.color = t.accent;
+
+  // Chain dot in topbar
+  const dot = document.getElementById('chain-dot');
+  if (dot && address) dot.style.background = t.accent;
+
+  // wallet avatar colour
+  const av = document.getElementById('wallet-avatar');
+  if (av) av.style.background = t.accent;
+
+  updateAllLabels(c);
+}
+
+function updateAllLabels(c) {
+  const sym  = c.tokenSymbol;
+  const mine = c.minerName;
+  const badge = c.badgeName;
+
+  // Config field labels
+  setText('cfg-label-token',  sym + ' Token');
+  setText('cfg-label-miner',  mine);
+  setText('cfg-label-badge',  badge);
+
+  // Tab label
+  setText('tab-token-label', sym);
+
+  // Mine tab
+  setText('lbl-your-mined',   sym + ' Mined');
+  setText('lbl-token-sym',    sym);
+  setText('lbl-yield',        sym + ' / Click');
+  setText('lbl-yield-sym',    sym);
+  setText('lbl-global-minted','Global ' + sym + ' Minted');
+  setText('lbl-global-cap',   'of 1,009,400 ' + sym);
+  setText('mine-btn-label',   '⛏\u00a0 Mine ' + sym);
+
+  // Token tab
+  setText('lbl-tok-balance',   'Your ' + sym + ' Balance');
+  setText('lbl-transfer-title','Transfer ' + sym);
+  setText('btn-send-token',    'Send ' + sym);
+
+  // Badge reqs
+  setText('badge-common-req',    'Reach 400 ' + sym + ' mined\n(Excavator tier)');
+  setText('badge-rare-req',      'Reach 9,800 ' + sym + ' mined\nOpen to all players');
+  setText('badge-legendary-req', '9,800 ' + sym + ' + Top-10 leaderboard\nOnly 10 ever minted');
+
+  // Leaderboard
+  setText('lbl-lb-title', 'Top 10 ' + mine + 's');
+  setText('lbl-lb-col',   sym + ' Mined');
+
+  // Admin section headings
+  setText('lbl-admin-token-section',    sym + ' Admin');
+  setText('lbl-admin-miner-section',    mine + ' Admin');
+  setText('lbl-admin-badge-section',    badge + ' Admin');
+  setText('lbl-admin-pause-token',      'Pause ' + sym);
+  setText('lbl-admin-pause-miner',      'Pause ' + mine);
+  setText('lbl-admin-pause-badge',      'Pause ' + badge);
+  setText('lbl-admin-token-ownership',  'Transfer ' + sym + ' Ownership');
+  setText('lbl-admin-miner-ownership',  'Transfer ' + mine + ' Ownership');
+  setText('lbl-admin-badge-ownership',  'Transfer ' + badge + ' Ownership');
+
+  // Modal sub
+  setText('modal-sub', 'Choose the network where ' + mine + ' contracts are deployed.');
+
+  // .tok-sym spans (game constants)
+  document.querySelectorAll('.tok-sym').forEach(el => { el.textContent = sym; });
+}
+
+function setText(id, text, val, prop) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (prop) { el.style[prop] = val; return; }
+  if (text !== null && text !== undefined) el.textContent = text;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Chain UI
+// ════════════════════════════════════════════════════════════════
+function openChainModal() {
+  renderChainList();
+  document.getElementById('chain-modal').classList.remove('hidden');
+}
+
+function renderChainList() {
+  const el = document.getElementById('chain-list');
+  el.innerHTML = Object.entries(CHAINS).map(([id, c]) => {
+    const active = Number(id) === selectedChainId;
+    const acBg   = active ? `background:${c.theme.glow};` : '';
+    const acBd   = active ? `border-color:${c.theme.accent};` : '';
+    return `<div class="chain-item${active?' active':''}" onclick="selectChain(${id})" style="${acBg}${acBd}">
+      <div class="chain-item-icon">${c.icon}</div>
+      <div>
+        <div class="chain-item-name">${c.name}</div>
+        <div class="chain-item-sub">${c.minerName} · ${c.tokenSymbol} · ID ${id}</div>
+      </div>
+      <div class="chain-item-check" style="color:${c.theme.accent}">✓</div>
+    </div>`;
+  }).join('');
+}
+
+function selectChain(id) {
+  selectedChainId = Number(id);
+  cfg.chainId = selectedChainId;
+  localStorage.setItem('cm_cfg', JSON.stringify(cfg));
+  applyChainTheme(selectedChainId);
+  applyChainAddresses(selectedChainId);
+  updateChainBadge();
+  renderChainList();
+  document.getElementById('chain-modal').classList.add('hidden');
+  if (provider) checkNetworkMatch();
+  initContracts();
+}
+
+function updateChainBadge() {
+  const c = CHAINS[selectedChainId];
+  document.getElementById('chain-name-label').textContent = c ? c.short : 'Chain ' + selectedChainId;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Wallet
+// ════════════════════════════════════════════════════════════════
+async function connectWallet() {
+  if (!window.ethereum) {
+    toast('No wallet found', 'Install MetaMask or open this page inside MiniPay.', 'error');
+    return;
+  }
+  if (isMiniPay()) { await autoConnectMiniPay(); return; }
+  try {
+    const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+    address  = accs[0];
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer   = await provider.getSigner();
+    updateWalletUI();
+    await checkNetworkMatch();
+    initContracts();
+    toast('Wallet connected', shortAddr(address), 'success');
+  } catch(e) {
+    toast('Connection failed', e.message, 'error');
+  }
+}
+
+function updateWalletUI() {
+  document.getElementById('wallet-label').textContent = address ? shortAddr(address) : 'Connect Wallet';
+  const dot = document.getElementById('chain-dot');
+  const c   = CHAINS[selectedChainId];
+  dot.style.background = address ? (c ? c.theme.accent : 'var(--green)') : 'var(--red)';
+  // Hide admin tab immediately on disconnect; checkAdminAccess will show it if warranted
+  if (!address) {
+    document.getElementById('tab-admin').style.display = 'none';
+    if (document.getElementById('panel-admin').classList.contains('active')) switchTab('mine');
+  }
+}
+
+async function checkNetworkMatch() {
+  if (!provider) return;
+  const net = await provider.getNetwork();
+  const wid = Number(net.chainId);
+  const mismatch = wid !== selectedChainId;
+  document.getElementById('network-warn').classList.toggle('hidden', !mismatch);
+  const dot = document.getElementById('chain-dot');
+  if (mismatch) {
+    dot.style.background = 'var(--amber)';
+  } else {
+    const c = CHAINS[selectedChainId];
+    dot.style.background = c ? c.theme.accent : 'var(--green)';
+    // Wallet is on a known chain — sync theme to wallet
+    if (CHAINS[wid]) {
+      selectedChainId = wid;
+      applyChainTheme(wid);
+      applyChainAddresses(wid);
+      updateChainBadge();
+      renderChainList();
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Contracts
+// ════════════════════════════════════════════════════════════════
+function initContracts() {
+  if (!signer) return;
+  try {
+    contracts.cball = cfg.cball && ethers.isAddress(cfg.cball)
+      ? new ethers.Contract(cfg.cball, CBALL_ABI, signer) : null;
+    contracts.miner = cfg.miner && ethers.isAddress(cfg.miner)
+      ? new ethers.Contract(cfg.miner, MINER_ABI, signer) : null;
+    contracts.badge = cfg.badge && ethers.isAddress(cfg.badge)
+      ? new ethers.Contract(cfg.badge, BADGE_ABI, signer) : null;
+    refreshAll();
+  } catch(e) { console.error(e); }
+}
+
+function refreshAll() {
+  refreshMineData();
+  refreshTokenData();
+  refreshBadgeData();
+  loadLeaderboard();
+  checkAdminAccess();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Admin access control
+// ════════════════════════════════════════════════════════════════
+async function checkAdminAccess() {
+  const tab = document.getElementById('tab-admin');
+
+  // No wallet or no contracts at all → hide tab entirely
+  if (!address || (!contracts.cball && !contracts.miner && !contracts.badge)) {
+    tab.style.display = 'none';
+    // If we're currently on admin, bounce to mine
+    if (document.getElementById('panel-admin').classList.contains('active')) switchTab('mine');
+    return;
+  }
+
+  // Fetch owner() from each contract that is loaded, in parallel
+  const results = await Promise.allSettled([
+    contracts.cball  ? contracts.cball.owner()  : Promise.resolve(null),
+    contracts.miner  ? contracts.miner.owner()  : Promise.resolve(null),
+    contracts.badge  ? contracts.badge.owner()  : Promise.resolve(null),
+  ]);
+
+  const [cballOwner, minerOwner, badgeOwner] = results.map(r =>
+    r.status === 'fulfilled' ? (r.value || null) : null
+  );
+
+  const me = address.toLowerCase();
+  const isCballOwner = cballOwner && cballOwner.toLowerCase() === me;
+  const isMinerOwner = minerOwner && minerOwner.toLowerCase() === me;
+  const isBadgeOwner = badgeOwner && badgeOwner.toLowerCase() === me;
+  const isAnyOwner   = isCballOwner || isMinerOwner || isBadgeOwner;
+
+  // Show/hide the tab
+  tab.style.display = isAnyOwner ? '' : 'none';
+  if (!isAnyOwner && document.getElementById('panel-admin').classList.contains('active')) {
+    switchTab('mine');
+    return;
+  }
+
+  // Build the header — ownership summary + per-contract chips
+  const sym   = CHAINS[selectedChainId]?.tokenSymbol || 'Token';
+  const mine  = CHAINS[selectedChainId]?.minerName   || 'Miner';
+  const badge = CHAINS[selectedChainId]?.badgeName   || 'Badge';
+
+  function ownerChip(label, owner, isYou) {
+    if (!owner) return '';
+    const cls  = isYou ? 'is-you' : 'not-you';
+    const mark = isYou ? '✓ you' : shortAddr(owner);
+    return `<span class="admin-owner-chip ${cls}">${label}: ${mark}</span>`;
+  }
+
+  const header = document.getElementById('admin-access-header');
+  header.innerHTML = `
+    <div class="admin-owner-row">
+      <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Owners</span>
+      ${ownerChip(sym,   cballOwner, isCballOwner)}
+      ${ownerChip(mine,  minerOwner, isMinerOwner)}
+      ${ownerChip(badge, badgeOwner, isBadgeOwner)}
+    </div>
+    ${!isAnyOwner ? `<div class="admin-locked-banner">🔒 Your wallet is not an owner of any loaded contract. All functions are locked.</div>` : ''}
+  `;
+
+  // Lock/unlock individual contract sections based on ownership
+  lockSection('adm-card-pause-token',    !isCballOwner);
+  lockSection('adm-card-setminter',      !isCballOwner);
+  lockSection('adm-card-updateminter',   !isCballOwner);
+  lockSection('adm-card-token-ownership',!isCballOwner);
+  lockSection('adm-card-pause-miner',    !isMinerOwner);
+  lockSection('adm-card-miner-ownership',!isMinerOwner);
+  lockSection('adm-card-pause-badge',    !isBadgeOwner);
+  lockSection('adm-card-badge-ownership',!isBadgeOwner);
+}
+
+function lockSection(id, shouldLock) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('locked', shouldLock);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Mine tab
+// ════════════════════════════════════════════════════════════════
+async function refreshMineData() {
+  if (!contracts.miner || !address) return;
+  const c = CHAINS[selectedChainId];
+  const sym = c ? c.tokenSymbol : '?';
+  try {
+    const [totalMined, clicks, tool, yieldPerClick] = await contracts.miner.getStats(address);
+    const remaining   = await contracts.miner.globalSupplyRemaining();
+    const totalMinted = await contracts.miner.totalMinted();
+
+    document.getElementById('stat-mined').textContent     = totalMined.toString();
+    document.getElementById('stat-clicks').textContent    = clicks.toString();
+    document.getElementById('stat-tool').textContent      = TOOL_NAMES[Number(tool)];
+    document.getElementById('stat-yield').textContent     = yieldPerClick.toString();
+    document.getElementById('stat-global').textContent    = Number(totalMinted).toLocaleString();
+    document.getElementById('stat-remaining').textContent = Number(remaining).toLocaleString();
+
+    const t     = Number(tool);
+    const mined = Number(totalMined);
+    document.getElementById('mine-tool-emoji').textContent = TOOL_EMOJIS[t];
+    document.getElementById('mine-tool-name').textContent  = TOOL_NAMES[t];
+
+    if (t === 0) {
+      document.getElementById('mine-tool-desc').textContent     = `1 ${sym} per click · Upgrade at 100 ${sym}`;
+      document.getElementById('upgrade-bar').style.width        = Math.min(100,(mined/100)*100)+'%';
+      document.getElementById('progress-left').textContent      = mined + ' mined';
+      document.getElementById('progress-right').textContent     = Math.max(0,100-mined) + ' to upgrade';
+    } else if (t === 1) {
+      document.getElementById('mine-tool-desc').textContent     = `3 ${sym} per click · Upgrade at 400 ${sym}`;
+      document.getElementById('upgrade-bar').style.width        = Math.min(100,((mined-100)/300)*100)+'%';
+      document.getElementById('progress-left').textContent      = mined + ' mined';
+      document.getElementById('progress-right').textContent     = Math.max(0,400-mined) + ' to upgrade';
+    } else {
+      document.getElementById('mine-tool-desc').textContent     = `9 ${sym} per click · Max tier reached`;
+      document.getElementById('upgrade-bar').style.width        = '100%';
+      document.getElementById('progress-left').textContent      = 'Max tier reached';
+      document.getElementById('progress-right').textContent     = '';
+    }
+  } catch(e) { console.error('refreshMineData', e); }
+}
+
+async function doMine() {
+  if (!contracts.miner) { toast('No contract', 'Apply a Miner contract address first.','error'); return; }
+  if (!address)          { toast('Not connected','Connect your wallet first.','error'); return; }
+  const btn = document.getElementById('mine-btn');
+  const c   = CHAINS[selectedChainId];
+  const sym = c ? c.tokenSymbol : '?';
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>&nbsp;Mining…';
+  try {
+    const overrides = await getMiniPayOverrides();
+    const tx = await contracts.miner.mine(overrides);
+    toast('Transaction sent', txLink(tx.hash), 'info');
+    await tx.wait();
+    toast('Mined!', sym + ' added to your account.', 'success');
+    refreshMineData(); refreshTokenData(); loadLeaderboard(); refreshBadgeData();
+  } catch(e) {
+    toast('Mine failed', e.reason || e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span id="mine-btn-label">⛏\u00a0 Mine ${sym}</span>`;
+  }
+}
+
+async function doUpgrade() {
+  if (!contracts.miner) { toast('No contract','','error'); return; }
+  const btn = document.getElementById('upgrade-btn');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>';
+  try {
+    const overrides = await getMiniPayOverrides();
+    const tx = await contracts.miner.upgrade(overrides);
+    toast('Transaction sent', txLink(tx.hash), 'info');
+    await tx.wait();
+    toast('Upgraded!', 'Tool upgraded successfully.', 'success');
+    refreshMineData();
+  } catch(e) { toast('Upgrade failed', e.reason || e.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '⬆&nbsp; Upgrade Tool'; }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Token tab
+// ════════════════════════════════════════════════════════════════
+async function refreshTokenData() {
+  if (!contracts.cball || !address) return;
+  const c = CHAINS[selectedChainId];
+  const sym = c ? c.tokenSymbol : '?';
+  try {
+    const [bal, supply, paused, minter, owner] = await Promise.all([
+      contracts.cball.balanceOf(address),
+      contracts.cball.totalSupply(),
+      contracts.cball.paused(),
+      contracts.cball.minter(),
+      contracts.cball.owner()
+    ]);
+    document.getElementById('tok-balance').textContent = bal.toString();
+    document.getElementById('tok-supply').textContent  = Number(supply).toLocaleString();
+    document.getElementById('tok-paused').textContent  = paused ? 'Yes' : 'No';
+    document.getElementById('tok-paused').className    = 'stat-val ' + (paused ? 'amber' : 'green');
+    document.getElementById('tok-minter').textContent  = shortAddr(minter);
+    document.getElementById('tok-owner').textContent   = shortAddr(owner);
+  } catch(e) { console.error('refreshTokenData', e); }
+}
+
+async function doTransfer() {
+  const to  = document.getElementById('tx-to').value.trim();
+  const amt = document.getElementById('tx-amount').value.trim();
+  if (!ethers.isAddress(to)) { toast('Invalid address','','error'); return; }
+  if (!amt || isNaN(amt))    { toast('Invalid amount','','error'); return; }
+  const sym = CHAINS[selectedChainId]?.tokenSymbol || 'tokens';
+  await sendTx(ov => contracts.cball.transfer(to, BigInt(amt), ov),
+    'Transfer', `${amt} ${sym} sent to ${shortAddr(to)}.`);
+  refreshTokenData();
+}
+
+async function doApprove() {
+  const spender = document.getElementById('ap-spender').value.trim();
+  const amt     = document.getElementById('ap-amount').value.trim();
+  if (!ethers.isAddress(spender)) { toast('Invalid address','','error'); return; }
+  const sym = CHAINS[selectedChainId]?.tokenSymbol || 'tokens';
+  await sendTx(ov => contracts.cball.approve(spender, BigInt(amt||0), ov),
+    'Approve', `Allowance set to ${amt||0} ${sym}.`);
+}
+
+async function doCheckAllowance() {
+  const own  = document.getElementById('al-owner').value.trim();
+  const spd  = document.getElementById('al-spender').value.trim();
+  if (!contracts.cball) { toast('No token contract','','error'); return; }
+  const sym = CHAINS[selectedChainId]?.tokenSymbol || 'tokens';
+  try {
+    const al = await contracts.cball.allowance(own, spd);
+    document.getElementById('al-result').textContent = `Allowance: ${al.toString()} ${sym}`;
+  } catch(e) { toast('Error', e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Badges tab
+// ════════════════════════════════════════════════════════════════
+async function refreshBadgeData() {
+  if (!contracts.badge) return;
+  try {
+    const [lc, rc, cc, paused] = await Promise.all([
+      contracts.badge.legendaryCount(),
+      contracts.badge.rareCount(),
+      contracts.badge.commonCount(),
+      contracts.badge.paused()
+    ]);
+    document.getElementById('badge-legendary-count').textContent = lc.toString();
+    document.getElementById('badge-rare-count').textContent      = rc.toString();
+    document.getElementById('badge-common-count').textContent    = cc.toString();
+    document.getElementById('badge-paused').textContent   = paused ? 'Yes' : 'No';
+    document.getElementById('badge-paused').className     = 'stat-val ' + (paused ? 'amber' : 'green');
+  } catch(e) {}
+
+  document.getElementById('badge-connect-notice').classList.toggle('hidden', !!address);
+  if (!address) return;
+
+  try {
+    const [ce,re,le,cc2,rc2,lc2] = await contracts.badge.eligibility(address);
+    setBadgeState('common', ce, cc2);
+    setBadgeState('rare',   re, rc2);
+    setBadgeLegendaryState(le, lc2);
+  } catch(e) { console.error('badge eligibility', e); }
+}
+
+function setBadgeState(tier, eligible, claimed) {
+  const card   = document.getElementById('badge-' + tier);
+  const action = document.getElementById('badge-' + tier + '-action');
+  card.className = 'badge-card' + (claimed?' claimed':eligible?' eligible':'');
+  if (claimed) {
+    action.innerHTML = `<div class="badge-claimed-tag">✓ Claimed</div>`;
+  } else if (eligible) {
+    const label = tier.charAt(0).toUpperCase() + tier.slice(1);
+    action.innerHTML = `<button class="btn btn-green btn-full" onclick="doClaim('${tier}')">Claim ${label} Badge</button>`;
+  } else {
+    action.innerHTML = `<button class="btn btn-full" disabled>Not yet eligible</button>`;
+  }
+}
+
+function setBadgeLegendaryState(eligible, claimed) {
+  const card   = document.getElementById('badge-legendary');
+  const action = document.getElementById('badge-legendary-action');
+  card.className = 'badge-card legendary-card' + (claimed?' claimed':eligible?' eligible':'');
+  if (claimed) {
+    action.innerHTML = `<div class="badge-claimed-tag" style="color:var(--gold);background:rgba(255,215,0,.14);border-color:rgba(255,215,0,.38);">★ Claimed</div>`;
+  } else if (eligible) {
+    action.innerHTML = `<button class="btn btn-gold btn-full" onclick="doClaim('legendary')">Claim Legendary Badge</button>`;
+  } else {
+    action.innerHTML = `<button class="btn btn-full" disabled>Not eligible</button>`;
+  }
+}
+
+async function doClaim(tier) {
+  if (!contracts.badge) { toast('No contract','','error'); return; }
+  const fns = { common:'claimCommon', rare:'claimRare', legendary:'claimLegendary' };
+  const lbl = tier.charAt(0).toUpperCase() + tier.slice(1);
+  await sendTx(ov => contracts.badge[fns[tier]](ov), 'Claim Badge', lbl + ' badge claimed!');
+  refreshBadgeData();
+}
+
+async function doNftTransfer(safe) {
+  const from    = document.getElementById('nft-from').value.trim();
+  const to      = document.getElementById('nft-to').value.trim();
+  const tokenId = document.getElementById('nft-tokenid').value.trim();
+  if (!ethers.isAddress(from)||!ethers.isAddress(to)) { toast('Invalid address','','error'); return; }
+  const fn = safe ? 'safeTransferFrom(address,address,uint256)' : 'transferFrom';
+  await sendTx(ov => contracts.badge[fn](from, to, BigInt(tokenId), ov), 'NFT Transfer', 'Badge transferred!');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Leaderboard
+// ════════════════════════════════════════════════════════════════
+async function loadLeaderboard() {
+  if (!contracts.miner) return;
+  const tbody = document.getElementById('lb-body');
+  const sym   = CHAINS[selectedChainId]?.tokenSymbol || '?';
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3)">Loading…</td></tr>';
+  try {
+    const [addrs, totals] = await contracts.miner.getLeaderboard();
+    if (!addrs.length) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">🏆</div><div class="empty-text">No miners yet — be the first!</div></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = addrs.map((a,i) => {
+      const isYou   = address && a.toLowerCase() === address.toLowerCase();
+      const rankCls = i===0?'rank gold':i===1?'rank silver':i===2?'rank bronze':'rank';
+      const medal   = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      return `<tr>
+        <td><span class="${rankCls}">${medal}&nbsp;${i+1}</span></td>
+        <td><span class="addr">${shortAddr(a)}</span>${isYou?'<span class="you-badge">you</span>':''}</td>
+        <td style="text-align:right;font-weight:600;">${Number(totals[i]).toLocaleString()} <span style="font-size:11px;color:var(--text3)">${sym}</span></td>
+        <td style="text-align:right;"><span style="color:var(--green)">✓</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--red)">Failed to load leaderboard.</td></tr>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Admin tab
+// ════════════════════════════════════════════════════════════════
+async function doTokenPause(p) {
+  const sym = CHAINS[selectedChainId]?.tokenSymbol || 'token';
+  await sendTx(ov => p ? contracts.cball.pause(ov) : contracts.cball.unpause(ov),
+    p?'Pause '+sym:'Unpause '+sym, sym+(p?' paused.':" unpaused."));
+  refreshTokenData();
+}
+async function doMinerPause(p) {
+  const mine = CHAINS[selectedChainId]?.minerName || 'Miner';
+  await sendTx(ov => p ? contracts.miner.pause(ov) : contracts.miner.unpause(ov),
+    p?'Pause '+mine:'Unpause '+mine, mine+(p?' paused.':" unpaused."));
+}
+async function doBadgePause(p) {
+  const badge = CHAINS[selectedChainId]?.badgeName || 'Badge';
+  await sendTx(ov => p ? contracts.badge.pause(ov) : contracts.badge.unpause(ov),
+    p?'Pause '+badge:'Unpause '+badge, badge+(p?' paused.':" unpaused."));
+  refreshBadgeData();
+}
+
+async function doSetMinter() {
+  const a = document.getElementById('adm-setminter').value.trim();
+  if (!ethers.isAddress(a)) { toast('Invalid address','','error'); return; }
+  await sendTx(ov => contracts.cball.setMinter(a, ov), 'Set Minter', 'Minter set.');
+}
+async function doUpdateMinter() {
+  const a = document.getElementById('adm-updateminter').value.trim();
+  if (!ethers.isAddress(a)) { toast('Invalid address','','error'); return; }
+  await sendTx(ov => contracts.cball.updateMinter(a, ov), 'Update Minter', 'Minter updated.');
+}
+
+async function doTransferOwnership(which) {
+  const inputMap = { cball:'adm-cball-newowner', miner:'adm-miner-newowner', badge:'adm-badge-newowner' };
+  const newOwner = document.getElementById(inputMap[which]).value.trim();
+  if (!ethers.isAddress(newOwner)) { toast('Invalid address','','error'); return; }
+  const cx = { cball:contracts.cball, miner:contracts.miner, badge:contracts.badge }[which];
+  if (!cx) { toast('Contract not set','','error'); return; }
+  await sendTx(ov => cx.transferOwnership(newOwner, ov), 'Transfer Ownership', 'Ownership transfer initiated.');
+}
+async function doAcceptOwnership(which) {
+  const cx = { cball:contracts.cball, miner:contracts.miner, badge:contracts.badge }[which];
+  if (!cx) { toast('Contract not set','','error'); return; }
+  await sendTx(ov => cx.acceptOwnership(ov), 'Accept Ownership', 'Ownership accepted.');
+}
+
+async function doNftApprove() {
+  const to  = document.getElementById('adm-nft-approveto').value.trim();
+  const tid = document.getElementById('adm-nft-tokenid').value.trim();
+  if (!ethers.isAddress(to)) { toast('Invalid address','','error'); return; }
+  await sendTx(ov => contracts.badge.approve(to, BigInt(tid), ov), 'Approve NFT', 'Approved.');
+}
+async function doSetApprovalForAll(approved) {
+  const op = document.getElementById('adm-nft-operator').value.trim();
+  if (!ethers.isAddress(op)) { toast('Invalid address','','error'); return; }
+  await sendTx(ov => contracts.badge.setApprovalForAll(op, approved, ov),
+    approved?'Grant All':'Revoke All', approved?'Operator approved.':'Operator revoked.');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Helpers
+// ════════════════════════════════════════════════════════════════
+
+// MiniPay requires legacy (type 0) transactions — no EIP-1559 fields.
+// We pass explicit overrides when inside MiniPay so ethers doesn't
+// auto-populate maxFeePerGas / maxPriorityFeePerGas.
+async function getMiniPayOverrides() {
+  if (!isMiniPay() || !provider) return {};
+  const feeData  = await provider.getFeeData();
+  const gasPrice = feeData.gasPrice || ethers.parseUnits('0.5', 'gwei');
+  return { type: 0, gasPrice };
+}
+
+async function sendTx(fn, label, successMsg) {
+  if (!address) { toast('Not connected','Connect your wallet first.','error'); return; }
+  try {
+    // For MiniPay, inject legacy tx overrides into the contract call
+    const overrides = await getMiniPayOverrides();
+    const tx = await fn(overrides);
+    toast(label + ' sent', txLink(tx.hash), 'info');
+    await tx.wait();
+    toast('Success', successMsg, 'success');
+  } catch(e) {
+    toast(label + ' failed', e.reason || e.message, 'error');
+  }
+}
+
+function toggleCfgDrawer() {
+  const drawer = document.getElementById('cfg-drawer');
+  const btn    = document.getElementById('cfg-toggle-btn');
+  const hidden = drawer.classList.toggle('hidden');
+  btn.textContent = hidden ? 'Override addresses' : 'Close';
+}
+
+function clearOverride() {
+  localStorage.removeItem('cm_cfg');
+  cfg = { cball:'', miner:'', badge:'', chainId: selectedChainId };
+  applyChainAddresses(selectedChainId);
+  document.getElementById('cfg-drawer').classList.add('hidden');
+  document.getElementById('cfg-toggle-btn').textContent = 'Override addresses';
+  initContracts();
+  toast('Reset', 'Using built-in addresses for this network.', 'info');
+}
+
+function switchTab(name) {
+  const tabs   = ['mine','token','badges','leaderboard','admin'];
+  tabs.forEach(t => {
+    document.getElementById('tab-'+t)?.classList.toggle('active', t===name);
+    document.getElementById('panel-'+t)?.classList.toggle('active', t===name);
+  });
+  if (name==='leaderboard') loadLeaderboard();
+  if (name==='token')       refreshTokenData();
+  if (name==='badges')      refreshBadgeData();
+  if (name==='mine')        refreshMineData();
+  if (name==='admin')       checkAdminAccess();
+}
+
+function shortAddr(a) {
+  return a ? a.slice(0,6)+'…'+a.slice(-4) : '—';
+}
+
+function txLink(hash) {
+  const base = CHAINS[selectedChainId]?.explorer || 'https://etherscan.io';
+  return `<a href="${base}/tx/${hash}" class="tx-link" target="_blank" rel="noopener">${hash.slice(0,10)}…</a>`;
+}
+
+function toast(title, msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const el   = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = `<div style="flex:1"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div><div class="toast-close" onclick="this.parentElement.remove()">×</div>`;
+  wrap.appendChild(el);
+  setTimeout(() => el?.remove(), 6000);
+}
+</script>
+</body>
+</html>
