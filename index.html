@@ -1181,6 +1181,20 @@ const TOOL_EMOJIS = ['⛏️','🔩','🏗️'];
 // ════════════════════════════════════════════════════════════════
 const isMiniPay    = () => !!(window.ethereum && window.ethereum.isMiniPay);
 const isBaseApp    = () => !!(window.ethereum && window.ethereum.isCoinbaseWallet);
+const isOKX        = () => !!(window.okxwallet || (window.ethereum && window.ethereum.isOKExWallet));
+
+// Returns the best available EIP-1193 provider across all injected wallets
+function getInjectedProvider() {
+  // Prefer OKX's own namespace if present (avoids conflicts with MetaMask shim)
+  if (window.okxwallet) return window.okxwallet;
+  // Coinbase / Base app
+  if (window.ethereum?.isCoinbaseWallet) return window.ethereum;
+  // MiniPay
+  if (window.ethereum?.isMiniPay) return window.ethereum;
+  // MetaMask or any other EIP-1193 wallet
+  if (window.ethereum) return window.ethereum;
+  return null;
+}
 
 // ════════════════════════════════════════════════════════════════
 //  Init
@@ -1191,13 +1205,20 @@ window.addEventListener('load', async () => {
   renderChainList();
   updateChainBadge();
 
-  if (window.ethereum) {
-    window.ethereum.on('accountsChanged', accs => {
+  const injected = getInjectedProvider();
+  if (injected) {
+    injected.on('accountsChanged', async accs => {
       address = accs[0] || null;
+      if (address && provider) {
+        signer = await provider.getSigner();
+      } else {
+        signer = null;
+      }
       updateWalletUI();
       if (address) initContracts();
+      else checkAdminAccess();
     });
-    window.ethereum.on('chainChanged', hex => {
+    injected.on('chainChanged', hex => {
       const id = parseInt(hex, 16);
       if (CHAINS[id]) {
         selectedChainId = id;
@@ -1245,9 +1266,9 @@ async function autoConnectMiniPay() {
     const cbtn = document.getElementById('chain-badge-btn');
     if (cbtn) cbtn.style.display = 'none';
 
-    const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accs = await injected.request({ method: 'eth_requestAccounts' });
     address  = accs[0];
-    provider = new ethers.BrowserProvider(window.ethereum);
+    provider = new ethers.BrowserProvider(injected);
     signer   = await provider.getSigner();
     updateWalletUI();
     initContracts();
@@ -1259,16 +1280,17 @@ async function autoConnectMiniPay() {
 
 async function autoConnectBaseApp() {
   try {
+    const injected = getInjectedProvider();
     // Try to switch the wallet to Base Mainnet automatically
     try {
-      await window.ethereum.request({
+      await injected.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0x2105' }], // 8453 = Base Mainnet
       });
     } catch (switchErr) {
       // 4902 = chain not added yet — add it then retry
       if (switchErr.code === 4902) {
-        await window.ethereum.request({
+        await injected.request({
           method: 'wallet_addEthereumChain',
           params: [{
             chainId: '0x2105',
@@ -1301,9 +1323,9 @@ async function autoConnectBaseApp() {
     const cbtn = document.getElementById('chain-badge-btn');
     if (cbtn) cbtn.style.display = 'none';
 
-    const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accs = await injected.request({ method: 'eth_requestAccounts' });
     address  = accs[0];
-    provider = new ethers.BrowserProvider(window.ethereum);
+    provider = new ethers.BrowserProvider(injected);
     signer   = await provider.getSigner();
     updateWalletUI();
     initContracts();
@@ -1527,21 +1549,23 @@ function updateChainBadge() {
 //  Wallet
 // ════════════════════════════════════════════════════════════════
 async function connectWallet() {
-  if (!window.ethereum) {
-    toast('No wallet found', 'Install MetaMask, Coinbase Wallet, or open this page inside the Base app.', 'error');
+  const injected = getInjectedProvider();
+  if (!injected) {
+    toast('No wallet found', 'Install MetaMask, OKX Wallet, Coinbase Wallet, or open this page inside a Web3 browser.', 'error');
     return;
   }
   if (isMiniPay()) { await autoConnectMiniPay(); return; }
   if (isBaseApp())  { await autoConnectBaseApp();  return; }
   try {
-    const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+    const accs = await injected.request({ method:'eth_requestAccounts' });
     address  = accs[0];
-    provider = new ethers.BrowserProvider(window.ethereum);
+    provider = new ethers.BrowserProvider(injected);
     signer   = await provider.getSigner();
     updateWalletUI();
     await checkNetworkMatch();
     initContracts();
-    toast('Wallet connected', shortAddr(address), 'success');
+    const walletName = isOKX() ? 'OKX Wallet' : 'Wallet';
+    toast(walletName + ' connected', shortAddr(address), 'success');
   } catch(e) {
     toast('Connection failed', e.message, 'error');
   }
