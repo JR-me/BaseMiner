@@ -4,22 +4,15 @@
     "payload": "eyJkb21haW4iOiJiYXNlLW1pbmVyLWZhY2FzdGVyLnZlcmNlbC5hcHAifQ",
     "signature": "sCH8tQNTCkROSiDubtEpDDal2rMbKcSvfS4rdlFjLMgzFYcQm089wMUN4MohxrorPZM+Mi1wy8UZesf4o+qE8hs="
   },
-  "miniapp": {
-    "version": "1",
+  "frame": {
+    "version": "next",
     "name": "BaseMiner",
-    "iconUrl": "https://base-miner-facaster.vercel.app/icon.png",
-    "homeUrl": "https://base-miner-facaster.vercel.app/",
-    "splashImageUrl": "https://base-miner-facaster.vercel.app/splash.png",
+    "iconUrl": "https://base-miner-ten.vercel.app/icon.png",
+    "homeUrl": "https://base-miner-ten.vercel.app",
+    "imageUrl": "https://base-miner-ten.vercel.app/og-image.png",
+    "buttonTitle": "⛏ Play BaseMiner",
+    "splashImageUrl": "https://base-miner-ten.vercel.app/splash.png",
     "splashBackgroundColor": "#070a14",
-    "subtitle": "Mine tokens on Base",
-    "description": "Click to mine CBALL tokens on Base. Upgrade your tool from Pickaxe to Drill to Excavator. Earn badges and climb the leaderboard.",
-    "primaryCategory": "games",
-    "tags": ["base", "mining", "onchain", "game", "tokens"],
-    "tagline": "Mine. Upgrade. Dominate.",
-    "heroImageUrl": "https://base-miner-facaster.vercel.app/og-image.png",
-    "ogTitle": "BaseMiner — Mine on Base",
-    "ogDescription": "Click to mine CBALL tokens on Base. Upgrade your tools and climb the leaderboard.",
-    "ogImageUrl": "https://base-miner-facaster.vercel.app/og-image.png",
-    "requiredChains": ["eip155:8453"]
+    "webhookUrl": ""
   }
 }
