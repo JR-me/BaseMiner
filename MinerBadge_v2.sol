@@ -317,7 +317,7 @@ contract MinerBadge {
         return o;
     }
 
-    function approve(address to, uint256 tokenId) external {
+    function approve(address to, uint256 tokenId) external whenNotPaused {
         address o = _ownerOf[tokenId];
         require(msg.sender == o || _operatorApprovals[o][msg.sender], "Not authorized");
         _approvals[tokenId] = to;
@@ -329,7 +329,7 @@ contract MinerBadge {
         return _approvals[tokenId];
     }
 
-    function setApprovalForAll(address operator, bool approved) external {
+    function setApprovalForAll(address operator, bool approved) external whenNotPaused {
         _operatorApprovals[msg.sender][operator] = approved;
         emit ApprovalForAll(msg.sender, operator, approved);
     }
@@ -350,6 +350,14 @@ contract MinerBadge {
         _balanceOf[from]  -= 1;
         _balanceOf[to]    += 1;
         delete _approvals[tokenId];
+        // Keep tokenOfOwnerByTier in sync with ownership.
+        // hasClaimedTier is intentionally NOT updated — the original claimer keeps
+        // their claim flag so they cannot double-claim after transferring a badge away.
+        Tier t = tierOf[tokenId];
+        if (tokenOfOwnerByTier[from][t] == tokenId) {
+            delete tokenOfOwnerByTier[from][t];
+        }
+        tokenOfOwnerByTier[to][t] = tokenId;
         emit Transfer(from, to, tokenId);
     }
 
